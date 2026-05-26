@@ -1,4 +1,4 @@
-name: Build and Deploy Spring Boot Docker
+name: Build and Deploy Spring Boot Docker -
 on:
   push:
     branches:
