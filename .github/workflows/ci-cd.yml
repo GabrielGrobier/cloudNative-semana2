@@ -1,17 +1,11 @@
-# GitHub Actions workflow for CI/CD: build, push to Docker Hub, deploy to EC2
-env:
-jobs:
 name: Build and Deploy Spring Boot Docker
-
 on:
   push:
     branches:
       - main
   workflow_dispatch:
-
 env:
   IMAGE_NAME: ${{ secrets.DOCKER_IMAGE_NAME }}
-
 jobs:
   docker:
     runs-on: ubuntu-latest
