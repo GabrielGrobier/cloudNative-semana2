@@ -1,0 +1,78 @@
+# GitHub Actions workflow for CI/CD: build, push to Docker Hub, deploy to EC2
+name: CI/CD Docker Spring Boot
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/mini-s3-springboot-example
+  CONTAINER_NAME: mini-s3-springboot-example
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_SESSION_TOKEN,AWS_REGION,AWS_S3_BUCKET,IMAGE_NAME
+          script: |
+            export IMAGE_NAME=${{ env.IMAGE_NAME }}
+            export AWS_ACCESS_KEY_ID='${{ secrets.AWS_ACCESS_KEY_ID }}'
+            export AWS_SECRET_ACCESS_KEY='${{ secrets.AWS_SECRET_ACCESS_KEY }}'
+            export AWS_SESSION_TOKEN='${{ secrets.AWS_SESSION_TOKEN }}'
+            export AWS_REGION='${{ secrets.AWS_REGION }}'
+            export AWS_S3_BUCKET='${{ secrets.AWS_S3_BUCKET }}'
+            docker pull $IMAGE_NAME:latest
+            mkdir -p /home/${USER}/app
+            cd /home/${USER}/app
+            echo "version: '3.8'" > docker-compose.yml
+            echo "services:" >> docker-compose.yml
+            echo "  app:" >> docker-compose.yml
+            echo "    image: $IMAGE_NAME:latest" >> docker-compose.yml
+            echo "    container_name: mini-s3-springboot-example" >> docker-compose.yml
+            echo "    ports:" >> docker-compose.yml
+            echo "      - '8080:8080'" >> docker-compose.yml
+            echo "    environment:" >> docker-compose.yml
+            echo "      - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> docker-compose.yml
+            echo "      - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> docker-compose.yml
+            echo "      - AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN" >> docker-compose.yml
+            echo "      - AWS_REGION=$AWS_REGION" >> docker-compose.yml
+            echo "      - AWS_S3_BUCKET=$AWS_S3_BUCKET" >> docker-compose.yml
+            echo "    restart: always" >> docker-compose.yml
+            docker compose pull
+            docker compose up -d --remove-orphans
