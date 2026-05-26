@@ -5,7 +5,7 @@ on:
       - main
   workflow_dispatch:
 env:
-  IMAGE_NAME: ${{ secrets.DOCKER_IMAGE_NAME }}
+  IMAGE_NAME: profegabogrobier/mini-s3-springboot-example:latest
 jobs:
   docker:
     runs-on: ubuntu-latest
@@ -30,7 +30,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.DOCKER_IMAGE_NAME }}
+          images: profegabogrobier/mini-s3-springboot-example
           tags: |
             type=raw,value=latest
             type=sha
@@ -42,7 +42,7 @@ jobs:
           file: ./Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: profegabogrobier/mini-s3-springboot-example:latest
           labels: ${{ steps.meta.outputs.labels }}
 
   deploy-ec2:
@@ -77,7 +77,7 @@ jobs:
             AWS_REGION=${{ secrets.AWS_REGION }}
             AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
             DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
-            IMAGE_NAME=${{ secrets.DOCKER_IMAGE_NAME }}
+            IMAGE_NAME=profegabogrobier/mini-s3-springboot-example:latest
             EOF
             docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_TOKEN }}"
             docker compose --env-file .env pull
