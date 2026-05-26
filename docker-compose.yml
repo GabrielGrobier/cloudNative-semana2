@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   app:
-    image: ${IMAGE_NAME:-mini-s3-springboot-example}:latest
+    image: ${IMAGE_NAME:-mini-s3-springboot-example}
     container_name: mini-s3-springboot-example
     ports:
       - "8080:8080"
